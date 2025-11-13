@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Gates of Olympus — Simulator (Dev Mode)</title>
+<style>
+:root{
+  --bg:#071026; --panel:#0f1726; --accent:#f6c84c; --muted:#9aa7b2;
+  --card: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Roboto,Segoe UI,Arial;background:
+radial-gradient(circle at 10% 10%, #112244 0%, transparent 20%), linear-gradient(180deg,#061028 0%, #02101a 100%);
+color:#e8f0fb;display:flex;align-items:flex-start;justify-content:center;padding:18px}
+.app{width:1200px;max-width:100%;display:grid;grid-template-columns:1fr 360px;gap:18px;padding:18px;border-radius:16px;background:rgba(255,255,255,0.02);box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+.header{display:flex;gap:12px;align-items:center}
+.logo{width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#f6c84c,#f29a1f);display:flex;align-items:center;justify-content:center;font-weight:900;color:#240f00;font-size:22px}
+.title{font-size:20px;margin:0}
+.left{padding:6px}
+.grid-wrap{background:var(--card);padding:12px;border-radius:12px;margin-top:12px;position:relative;overflow:hidden}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:12px}
+.cell{height:92px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;position:relative;transition:transform .18s}
+.symbol{width:94%;height:88%;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;color:#fff}
+.sym-zeus{background:linear-gradient(180deg,#fff8e0,#ffd76a);color:#1f1400}
+.sym-M{background:linear-gradient(180deg,#ffd77f,#d9a400)}
+.sym-A{background:linear-gradient(180deg,#ffb27b,#ff7a00)}
+.sym-B{background:linear-gradient(180deg,#d9b2ff,#9b5cff)}
+.sym-C{background:linear-gradient(180deg,#8ef6c0,#25c47f)}
+.sym-D{background:linear-gradient(180deg,#9fd9ff,#2a93ff)}
+.sym-SC{background:linear-gradient(180deg,#fff7cd,#ffe76b);color:#3a2300}
+.overlay{position:absolute;left:6px;top:6px;background:rgba(0,0,0,0.45);padding:4px 8px;border-radius:8px;font-size:12px;color:var(--accent)}
+.controls{display:flex;align-items:center;gap:10px;margin-top:12px}
+button{background:linear-gradient(180deg,#f6c84c,#f29a1f);border:none;padding:10px 14px;border-radius:10px;font-weight:800;cursor:pointer;color:#23140a}
+.input{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:8px;color:inherit;width:100px}
+.sidebar{padding:12px;background:var(--card);border-radius:12px;height:fit-content}
+.stat{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;padding:6px 0}
+.log{height:200px;overflow:auto;background:rgba(0,0,0,0.14);border-radius:8px;padding:8px;font-size:13px}
+.dev-panel{margin-top:12px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.12)}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.slider{flex:1}
+.small{font-size:13px;color:var(--muted)}
+.footer{font-size:12px;color:var(--muted);margin-top:8px}
+.lightning{position:absolute;left:50%;top:-10%;pointer-events:none;mix-blend-mode:screen;opacity:0;transform:translateX(-50%)}
+.light1{width:420px;height:420px;background:radial-gradient(circle at 50% 40%, rgba(246,200,76,0.18) 0%, rgba(246,200,76,0.02) 20%, transparent 60%);border-radius:50%}
+.flash{position:absolute;left:40%;top:-6%;width:2px;height:200px;background:linear-gradient(180deg,#fff,#ffd76a);filter:blur(6px);opacity:0;transform:rotate(-8deg)}
+@keyframes flashIn {0%{opacity:0;transform:translateY(-20px) scaleY(.7)}50%{opacity:1}100%{opacity:0;transform:translateY(20px) scaleY(1)}}
+.burst{position:absolute;border-radius:50%;pointer-events:none;opacity:0;transform:scale(.6)}
+@keyframes pop {from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+.dev-badge{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:8px;color:var(--muted);font-weight:700;font-size:13px}
+.controls-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.toggle{background:#0a1220;border:1px solid rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;cursor:pointer}
+.small-btn{padding:6px 8px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="left">
+    <div class="header">
+      <div class="logo">GO</div>
+      <div>
+        <h3 class="title">Gates of Olympus — Simulator (Dev Mode)</h3>
+        <div class="small">6×5 grid · Zeus multipliers · Scatter free-spins (simulator only)</div>
+      </div>
+    </div>
+
+    <div class="grid-wrap" id="gridWrap">
+      <div class="lightning" id="lightning">
+        <div class="light1"></div>
+        <div class="flash" id="flash1"></div>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <div class="controls">
+        <label>Bet: <input id="bet" class="input" type="number" value="1" min="0.1" step="0.1"></label>
+        <button id="spinBtn">SPIN</button>
+        <button id="autoBtn" class="small-btn">AUTO 50</button>
+        <div class="controls-right">
+          <div class="dev-badge" id="devToggleBtn" style="cursor:pointer">Developer Mode: OFF</div>
+          <div style="color:var(--muted);font-weight:700">Balance: <span id="balance" style="color:var(--accent);margin-left:8px">1000</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+        <div class="dev-panel" style="flex:1">
+          <div style="font-weight:900">Paytable (counts anywhere)</div>
+          <div class="small">M (Zeus Gold): ×5=80 · ×10=300 · ×20=1000</div>
+          <div class="small">A: ×5=20 · B: ×5=10 · C: ×5=8 · D: ×5=6</div>
+        </div>
+        <div style="width:200px" class="dev-panel">
+          <div style="font-weight:900">Free Spins: <span id="freeCount">0</span></div>
+          <div class="small">Multiplier Active: <span id="curMult">1x</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dev-panel" style="margin-top:12px">
+      <div style="font-weight:900;margin-bottom:6px">Quick Actions</div>
+      <div style="display:flex;gap:8px">
+        <button id="giveFree" class="small-btn">Grant 5 Free Spins</button>
+        <button id="resetStats" class="small-btn">Reset Stats</button>
+        <button id="sparks" class="small-btn">Zeus Spark</button>
+      </div>
+      <div class="footer small" style="margin-top:8px">Tip: Toggle Developer Mode to reveal probability controls on the right panel.</div>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div style="font-weight:900">Stats</div>
+    <div class="stat"><div>Spins</div><div id="spins">0</div></div>
+    <div class="stat"><div>Total Bet</div><div id="totalBet">0</div></div>
+    <div class="stat"><div>Total Return</div><div id="totalReturn">0</div></div>
+    <div class="stat"><div>Observed RTP</div><div id="rtp">—</div></div>
+
+    <div style="margin-top:12px;font-weight:900">Game Log</div>
+    <div class="log" id="log"></div>
+
+    <div class="dev-panel" id="devPanel" style="display:none;margin-top:12px">
+      <div style="font-weight:900;margin-bottom:6px">Developer Mode — Probability Controls</div>
+
+      <div class="row">
+        <div style="width:90px" class="small">Target RTP</div>
+        <input id="targetRtp" type="range" min="80" max="110" value="96" class="slider">
+        <div style="width:50px;text-align:right" id="targetRtpVal">96%</div>
+      </div>
+
+      <div class="row">
+        <div style="width:90px" class="small">Multiplier Chance</div>
+        <input id="multChance" type="range" min="0" max="60" value="20" class="slider">
+        <div style="width:40px"text-align:right id="multChanceVal">20%</div>
+      </div>
+
+      <div class="row">
+        <div style="width:90px" class="small">Max Mult</div>
+        <input id="maxMult" type="range" min="1" max="20" value="6" class="slider">
+        <div style="width:40px" id="maxMultVal">6x</div>
+      </div>
+
+      <div style="font-weight:800;margin-top:8px;margin-bottom:6px">Symbol Weights (bigger = more frequent)</div>
+      <div class="row"><div style="width:70px" class="small">Zeus(M)</div><input id="wM" type="range" min="1" max="30" value="6" class="slider"><div id="wMVal">6</div></div>
+      <div class="row"><div style="width:70px" class="small">Orange(A)</div><input id="wA" type="range" min="1" max="30" value="10" class="slider"><div id="wAVal">10</div></div>
+      <div class="row"><div style="width:70px" class="small">Purple(B)</div><input id="wB" type="range" min="1" max="30" value="12" class="slider"><div id="wBVal">12</div></div>
+      <div class="row"><div style="width:70px" class="small">Green(C)</div><input id="wC" type="range" min="1" max="30" value="14" class="slider"><div id="wCVal">14</div></div>
+      <div class="row"><div style="width:70px" class="small">Blue(D)</div><input id="wD" type="range" min="1" max="30" value="18" class="slider"><div id="wDVal">18</div></div>
+      <div class="row"><div style="width:70px" class="small">Scatter(⚡)</div><input id="wSC" type="range" min="1" max="30" value="5" class="slider"><div id="wSCVal">5</div></div>
+
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Developer Mode changes distribution & multiplier probability only — it does not let you "choose a specific spin win". Use these for testing RTP & behaviour.</div>
+    </div>
+  </aside>
+</div>
+
+<!-- Audio via WebAudio (simple tones) -->
+<script>
+/* ------------------------------
+   Core simulator logic
+   - 6 columns × 5 rows
+   - Symbol weights adjustable in Developer Mode
+   - Multiplier chance & max mult adjustable
+   - Target RTP influences multiplier frequency (softly)
+   - No per-spin manual forcing — only probability parameters
+   ------------------------------ */
+
+const ROWS = 5, COLS = 6;
+// Default symbol definitions (icons & css classes)
+let SYMBOLS = [
+  {id:'M', name:'Zeus', css:'sym-M', icon:'⚱️', weight:6},
+  {id:'A', name:'Orange', css:'sym-A', icon:'🍊', weight:10},
+  {id:'B', name:'Purple', css:'sym-B', icon:'💎', weight:12},
+  {id:'C', name:'Green', css:'sym-C', icon:'🍀', weight:14},
+  {id:'D', name:'Blue', css:'sym-D', icon:'🔷', weight:18},
+  {id:'SC', name:'Scatter', css:'sym-SC', icon:'⚡', weight:5}
+];
+
+// Paytable (counts anywhere)
+const PAY = {
+  M:{5:80,10:300,20:1000},
+  A:{5:20,10:60,20:200},
+  B:{5:10,10:30,20:120},
+  C:{5:8,10:25,20:90},
+  D:{5:6,10:18,20:70}
+};
+
+// State
+let grid = []; // ROWS x COLS of symbol objects (with optional mult property)
+let balance = 1000, spins = 0, totalBet = 0, totalReturn = 0;
+let freeSpins = 0;
+let autoRunning = false;
+let autoplayCount = 0;
+
+// UI refs
+const gridEl = document.getElementById('grid');
+const spinBtn = document.getElementById('spinBtn');
+const autoBtn = document.getElementById('autoBtn');
+const betEl = document.getElementById('bet');
+const balanceEl = document.getElementById('balance');
+const spinsEl = document.getElementById('spins');
+const totalBetEl = document.getElementById('totalBet');
+const totalReturnEl = document.getElementById('totalReturn');
+const rtpEl = document.getElementById('rtp');
+const logEl = document.getElementById('log');
+const freeCountEl = document.getElementById('freeCount');
+const curMultEl = document.getElementById('curMult');
+
+const devToggleBtn = document.getElementById('devToggleBtn');
+const devPanel = document.getElementById('devPanel');
+
+// Developer controls
+const targetRtp = document.getElementById('targetRtp');
+const targetRtpVal = document.getElementById('targetRtpVal');
+const multChance = document.getElementById('multChance');
+const multChanceVal = document.getElementById('multChanceVal');
+const maxMult = document.getElementById('maxMult');
+const maxMultVal = document.getElementById('maxMultVal');
+const wM = document.getElementById('wM'); const wMVal = document.getElementById('wMVal');
+const wA = document.getElementById('wA'); const wAVal = document.getElementById('wAVal');
+const wB = document.getElementById('wB'); const wBVal = document.getElementById('wBVal');
+const wC = document.getElementById('wC'); const wCVal = document.getElementById('wCVal');
+const wD = document.getElementById('wD'); const wDVal = document.getElementById('wDVal');
+const wSC = document.getElementById('wSC'); const wSCVal = document.getElementById('wSCVal');
+
+const giveFree = document.getElementById('giveFree');
+const resetStats = document.getElementById('resetStats');
+const sparks = document.getElementById('sparks');
+
+const lightningEl = document.getElementById('lightning');
+const flash1 = document.getElementById('flash1');
+
+
+// Setup initial UI values
+function applyDevUIValues(){
+  targetRtpVal.textContent = targetRtp.value + '%';
+  multChanceVal.textContent = multChance.value + '%';
+  maxMultVal.textContent = maxMult.value + 'x';
+  wMVal.textContent = wM.value; wAVal.textContent = wA.value; wBVal.textContent = wB.value; wCVal.textContent = wC.value; wDVal.textContent = wD.value; wSCVal.textContent = wSC.value;
+}
+applyDevUIValues();
+
+// When dev sliders change, update SYMBOLS and UI
+[targetRtp, multChance, maxMult, wM, wA, wB, wC, wD, wSC].forEach(inp=>{
+  inp.addEventListener('input', ()=>{
+    applyDevUIValues();
+    SYMBOLS[0].weight = parseInt(wM.value);
+    SYMBOLS[1].weight = parseInt(wA.value);
+    SYMBOLS[2].weight = parseInt(wB.value);
+    SYMBOLS[3].weight = parseInt(wC.value);
+    SYMBOLS[4].weight = parseInt(wD.value);
+    SYMBOLS[5].weight = parseInt(wSC.value);
+  });
+});
+
+// Build weighted pool according to current weights
+function buildPool(){
+  const pool = [];
+  SYMBOLS.forEach(s=>{
+    for(let i=0;i<s.weight;i++) pool.push(s);
+  });
+  return pool;
+}
+let pool = buildPool();
+
+// Render grid UI
+function renderGrid(){
+  gridEl.innerHTML = '';
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const cell = document.createElement('div'); cell.className='cell';
+      const symObj = grid[r] && grid[r][c] ? grid[r][c] : SYMBOLS[3]; // fallback
+      const inner = document.createElement('div'); inner.className='symbol '+symObj.css; inner.textContent = symObj.icon;
+      cell.appendChild(inner);
+      // multiplier overlay
+      if(symObj.mult && symObj.mult>1){
+        const o = document.createElement('div'); o.className='overlay'; o.textContent = symObj.mult+'x';
+        cell.appendChild(o);
+      }
+      gridEl.appendChild(cell);
+    }
+  }
+}
+
+// Fill grid randomly from pool (creates copies)
+function fillRandomGrid(){
+  pool = buildPool();
+  grid = Array.from({length:ROWS}, ()=>Array.from({length:COLS}, ()=>{
+    // random pick
+    const s = pool[Math.floor(Math.random()*pool.length)];
+    // return shallow copy so we can attach 'mult' without changing original
+    return {...s};
+  }));
+}
+
+// Evaluate counts anywhere and compute payout
+function evaluatePayout(bet){
+  const counts = {};
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const id = grid[r][c].id;
+    counts[id] = (counts[id]||0)+1;
+  }
+  // base payout from counts & paytable
+  let base = 0;
+  for(const symId in PAY){
+    const cnt = counts[symId]||0;
+    if(cnt>=20) base += (PAY[symId][20] || 0);
+    else if(cnt>=10) base += (PAY[symId][10] || 0);
+    else if(cnt>=5) base += (PAY[symId][5] || 0);
+  }
+  // scatter free-spin trigger
+  const scat = counts['SC'] || 0;
+
+  // collect multipliers from grid (Zeus or special multiplier tokens)
+  let totalMult = 1;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const s = grid[r][c];
+    if(s.mult && s.mult>1) totalMult *= s.mult;
+  }
+
+  // final payout (payout units; multiply by bet later)
+  const payoutUnits = base * totalMult;
+
+  return {payoutUnits, base, totalMult, scat};
+}
+
+// Decision: attach multipliers randomly to some cells according to multChance & maxMult
+function attachMultipliers(){
+  const chance = parseFloat(multChance.value)/100; // e.g., 0.2
+  const max = parseInt(maxMult.value);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(Math.random() < chance){
+      // small distribution bias: higher chance for small mults
+      const m = 1 + Math.floor(Math.pow(Math.random(),1.6) * (max-1)) + 1;
+      // cap between 2...max
+      const multVal = Math.min(max, Math.max(2, m));
+      grid[r][c].mult = multVal;
+    } else {
+      delete grid[r][c].mult;
+    }
+  }
+}
+
+// Soft RTP influence: if observed RTP < target, slightly bias to produce more/high mults by temporarily boosting mult chance
+function applySoftRtpAdjustment(){
+  const observed = totalBet > 0 ? (totalReturn/totalBet*100) : null;
+  const target = parseFloat(targetRtp.value);
+  if(observed !== null && observed < target){
+    // calculate adjustment factor proportional to difference but capped
+    const diff = Math.min(15, target - observed); // don't over-correct
+    const factor = 1 + (diff/100)*1.5;
+    // increase mult chance modestly
+    const baseChance = parseFloat(multChance.value);
+    const boosted = Math.min(70, baseChance * factor);
+    // temporarily set effective multChance for this spin (without changing UI)
+    return {effectiveMultChance: boosted};
+  } else {
+    return {effectiveMultChance: parseFloat(multChance.value)};
+  }
+}
+
+// Spin logic (single spin)
+function doSpin(){
+  const bet = Math.max(0.1, parseFloat(betEl.value) || 1);
+  if(balance < bet){ appendLog('Insufficient balance'); return; }
+  balance -= bet; totalBet += bet; spins++;
+  // fill grid
+  fillRandomGrid();
+  // apply soft RTP adjustment (does not guarantee anything, only nudges multiplier assignments)
+  const adj = applySoftRtpAdjustment();
+  // temporarily attach multipliers based on adj.effectiveMultChance (we'll override attachMultipliers logic to use this)
+  const chance = adj.effectiveMultChance / 100;
+  const max = parseInt(maxMult.value);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(Math.random() < chance){
+      const m = 2 + Math.floor(Math.pow(Math.random(),1.5) * (max-1));
+      grid[r][c].mult = Math.min(max, Math.max(2, m));
+    } else {
+      delete grid[r][c].mult;
+    }
+  }
+
+  renderGrid(); playSpinSound();
+
+  // small visual flash if many multipliers
+  let multCount=0;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(grid[r][c].mult) multCount++;
+
+  if(multCount >= 3) showLightning();
+
+  const {payoutUnits, base, totalMult, scat} = evaluatePayout(bet);
+  const win = payoutUnits * bet;
+  // special: scat >=4 => award free spins (simulator)
+  let fsAwarded = 0;
+  if(scat >= 4){
+    fsAwarded = 10; // base free spins
+    freeSpins += fsAwarded;
+  }
+
+  // apply result
+  balance += win;
+  totalReturn += win;
+
+  // update UI + stats
+  updateUI();
+
+  // log
+  const info = `Spin ${spins}: Bet ${bet.toFixed(2)} → Win ${win.toFixed(2)} (base ${base}, mult ${totalMult}x) scat:${scat} free:${fsAwarded}`;
+  appendLog(info);
+
+  // If there are free spins queued, auto-play them
+  if(freeSpins > 0){
+    freeSpins--;
+    freeCountEl.textContent = freeSpins;
+    setTimeout(()=> doSpin(), 400); // quick chain free-spin
+  }
+}
+
+// UI helpers
+function updateUI(){
+  balanceEl.textContent = balance.toFixed(2);
+  spinsEl.textContent = spins;
+  totalBetEl.textContent = totalBet.toFixed(2);
+  totalReturnEl.textContent = totalReturn.toFixed(2);
+  const rtp = totalBet>0 ? (totalReturn/totalBet*100).toFixed(2) : '—';
+  rtpEl.textContent = (rtp==='—') ? '—' : rtp + '%';
+  freeCountEl.textContent = freeSpins;
+  curMultEl.textContent = '—';
+}
+
+// Logging
+function appendLog(s){
+  const line = document.createElement('div');
+  line.textContent = s;
+  logEl.prepend(line);
+}
+
+// simple spin sound via WebAudio
+let audioCtx = null;
+function playSpinSound(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const now = audioCtx.currentTime;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(320, now);
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.06, now + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start(now); o.stop(now + 0.26);
+}
+
+// richer "zeus spark" sound
+function playZeusSound(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const now = audioCtx.currentTime;
+  // multiple oscillators layered
+  for(let i=0;i<3;i++){
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = ['sine','triangle','sawtooth'][i%3];
+    o.frequency.setValueAtTime(400 + i*150, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(0.08/(i+1), now + 0.01 + i*0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.5 + i*0.05);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(now); o.stop(now + 0.6 + i*0.05);
+  }
+}
+
+// visual lightning
+function showLightning(){
+  lightningEl.style.transition='opacity .05s';
+  lightningEl.style.opacity = 1;
+  flash1.style.animation = 'flashIn .35s ease-out';
+  playZeusSound();
+  setTimeout(()=>{ lightningEl.style.opacity = 0; flash1.style.animation = ''; }, 420);
+}
+
+// Button events
+spinBtn.onclick = () => {
+  if(autoRunning) return;
+  doSpin();
+};
+
+autoBtn.onclick = async () => {
+  if(!autoRunning){
+    autoRunning = true;
+    let count = 50;
+    autoplayCount = count;
+    autoBtn.textContent = 'STOP';
+    for(let i=0;i<count;i++){
+      if(!autoRunning) break;
+      doSpin();
+      await new Promise(r => setTimeout(r, 220));
+    }
+    autoRunning = false;
+    autoBtn.textContent = 'AUTO 50';
+  } else {
+    autoRunning = false;
+    autoBtn.textContent = 'AUTO 50';
+  }
+};
+
+// quick actions
+giveFree.onclick = ()=>{ freeSpins += 5; freeCountEl.textContent = freeSpins; appendLog('Granted 5 free spins (dev).'); };
+resetStats.onclick = ()=>{ spins=0; totalBet=0; totalReturn=0; balance=1000; freeSpins=0; updateUI(); appendLog('Stats reset.'); renderGrid(); };
+sparks.onclick = ()=>{ showLightning(); appendLog('Zeus spark (dev).'); };
+
+// developer mode toggle
+let devOn = false;
+devToggleBtn.onclick = ()=>{
+  devOn = !devOn;
+  devPanel.style.display = devOn ? 'block' : 'none';
+  devToggleBtn.textContent = 'Developer Mode: ' + (devOn ? 'ON' : 'OFF');
+  // when toggled on, sync sliders to SYMBOLS
+  if(devOn){
+    wM.value = SYMBOLS[0].weight; wA.value = SYMBOLS[1].weight; wB.value = SYMBOLS[2].weight; wC.value = SYMBOLS[3].weight; wD.value = SYMBOLS[4].weight; wSC.value = SYMBOLS[5].weight;
+    applyDevUIValues();
+  }
+};
+
+// initial fill
+fillRandomGrid();
+renderGrid();
+updateUI();
+appendLog('Simulator ready. Developer Mode available.');
+</script>
+</body>
+</html>
